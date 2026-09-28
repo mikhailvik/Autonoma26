@@ -16,11 +16,37 @@ public class DroneController : MonoBehaviour
     private float thrustOffset;
     private float targetPitch;
     private float targetRoll;
+    //additionally, we can add a flag to indicate whether the drone is being controlled by an agent or by player input
+    private bool agentControl;
+    private float agentPitch;
+    private float agentRoll;
+    private float agentThrust;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         rb.constraints |= RigidbodyConstraints.FreezeRotationY;
+    }
+
+    // This method is called by the DroneAgent to set the input values for the drone
+    public void SetAgentInput(float pitch, float roll, float thrust)
+    {
+        agentControl = true;
+
+        agentPitch = Mathf.Clamp(pitch, -1f, 1f);
+        agentRoll = Mathf.Clamp(roll, -1f, 1f);
+        agentThrust = Mathf.Clamp(thrust, -1f, 1f);
+    }
+    // This method is called by the DroneAgent to reset the input values for the drone
+    public void ResetAgentControl()
+    {
+        thrustOffset = 0f;
+        targetPitch = 0f;
+        targetRoll = 0f;
+
+        agentPitch = 0f;
+        agentRoll = 0f;
+        agentThrust = 0f;
     }
 
     private void FixedUpdate()
@@ -32,6 +58,10 @@ public class DroneController : MonoBehaviour
         LimitTiltAngle();
     }
 
+
+
+    // We change the UpdateThrustOffset and UpdateTargetTilt methods to use agent input if agentControl is true
+/*
     private void UpdateThrustOffset()
     {
         if (Input.GetKey(KeyCode.R))
@@ -54,7 +84,38 @@ public class DroneController : MonoBehaviour
             thrustOffset,
             -maximumThrustOffset,
             maximumThrustOffset);
+    } */
+
+    private void UpdateThrustOffset()
+{
+    if (agentControl)
+    {
+        thrustOffset += agentThrust * thrustChangeRate * Time.fixedDeltaTime;
     }
+    else
+    {
+        if (Input.GetKey(KeyCode.R))
+        {
+            thrustOffset += thrustChangeRate * Time.fixedDeltaTime;
+        }
+        else if (Input.GetKey(KeyCode.F))
+        {
+            thrustOffset -= thrustChangeRate * Time.fixedDeltaTime;
+        }
+        else
+        {
+            thrustOffset = Mathf.MoveTowards(
+                thrustOffset,
+                0.0f,
+                thrustReturnRate * Time.fixedDeltaTime);
+        }
+    }
+
+    thrustOffset = Mathf.Clamp(
+        thrustOffset,
+        -maximumThrustOffset,
+        maximumThrustOffset);
+}
 
     private void ApplyThrust()
     {
@@ -81,8 +142,8 @@ public class DroneController : MonoBehaviour
 
         rb.AddRelativeTorque(localTorque, ForceMode.Force);
     }
-
-    private void UpdateTargetTilt()
+    // We change the UpdateTargetTilt method to use agent input if agentControl is true
+    /*private void UpdateTargetTilt()
     {
         if (Input.GetKey(KeyCode.W))
         {
@@ -103,6 +164,47 @@ public class DroneController : MonoBehaviour
 
         targetPitch = Mathf.Clamp(targetPitch, -maximumTiltAngle, maximumTiltAngle);
         targetRoll = Mathf.Clamp(targetRoll, -maximumTiltAngle, maximumTiltAngle);
+    }*/
+
+        private void UpdateTargetTilt()
+    {
+        if (agentControl)
+        {
+            targetPitch += agentPitch * tiltChangeRate * Time.fixedDeltaTime;
+            targetRoll += agentRoll * tiltChangeRate * Time.fixedDeltaTime;
+        }
+        else
+        {
+            if (Input.GetKey(KeyCode.W))
+            {
+                targetPitch += tiltChangeRate * Time.fixedDeltaTime;
+            }
+
+            if (Input.GetKey(KeyCode.S))
+            {
+                targetPitch -= tiltChangeRate * Time.fixedDeltaTime;
+            }
+
+            if (Input.GetKey(KeyCode.D))
+            {
+                targetRoll -= tiltChangeRate * Time.fixedDeltaTime;
+            }
+
+            if (Input.GetKey(KeyCode.A))
+            {
+                targetRoll += tiltChangeRate * Time.fixedDeltaTime;
+            }
+        }
+
+        targetPitch = Mathf.Clamp(
+            targetPitch,
+            -maximumTiltAngle,
+            maximumTiltAngle);
+
+        targetRoll = Mathf.Clamp(
+            targetRoll,
+            -maximumTiltAngle,
+            maximumTiltAngle);
     }
 
     private Vector3 GetLocalTiltAngles()
