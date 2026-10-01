@@ -16,11 +16,45 @@ public class DroneController : MonoBehaviour
     private float thrustOffset;
     private float targetPitch;
     private float targetRoll;
-    //additionally, we can add a flag to indicate whether the drone is being controlled by an agent or by player input
-    private bool agentControl;
-    private float agentPitch;
-    private float agentRoll;
-    private float agentThrust;
+
+
+    // FOR ML-AGENTS
+    // These values allow the ML-Agent to control the drone using the same physics as the original keyboard controller.
+    private bool useAgentControls = false;
+
+    private float agentForwardInput = 0.0f;
+    private float agentSidewaysInput = 0.0f;
+    private float agentVerticalInput = 0.0f;
+
+
+    // FOR ML-AGENTS
+    // The agent calls this method to send movement commands to the original DroneController.
+    public void SetAgentControls(
+        float forward,
+        float sideways,
+        float vertical)
+    {
+        useAgentControls = true;
+
+        agentForwardInput = Mathf.Clamp(forward, -1.0f, 1.0f);
+        agentSidewaysInput = Mathf.Clamp(sideways, -1.0f, 1.0f);
+        agentVerticalInput = Mathf.Clamp(vertical, -1.0f, 1.0f);
+    }
+
+
+    // FOR ML-AGENTS
+    // Clears all commands when a new training episode begins.
+    public void ClearAgentControls()
+    {
+        agentForwardInput = 0.0f;
+        agentSidewaysInput = 0.0f;
+        agentVerticalInput = 0.0f;
+
+        thrustOffset = 0.0f;
+        targetPitch = 0.0f;
+        targetRoll = 0.0f;
+    }
+
 
     private void Awake()
     {
@@ -28,26 +62,6 @@ public class DroneController : MonoBehaviour
         rb.constraints |= RigidbodyConstraints.FreezeRotationY;
     }
 
-    // This method is called by the DroneAgent to set the input values for the drone
-    public void SetAgentInput(float pitch, float roll, float thrust)
-    {
-        agentControl = true;
-
-        agentPitch = Mathf.Clamp(pitch, -1f, 1f);
-        agentRoll = Mathf.Clamp(roll, -1f, 1f);
-        agentThrust = Mathf.Clamp(thrust, -1f, 1f);
-    }
-    // This method is called by the DroneAgent to reset the input values for the drone
-    public void ResetAgentControl()
-    {
-        thrustOffset = 0f;
-        targetPitch = 0f;
-        targetRoll = 0f;
-
-        agentPitch = 0f;
-        agentRoll = 0f;
-        agentThrust = 0f;
-    }
 
     private void FixedUpdate()
     {
@@ -59,141 +73,146 @@ public class DroneController : MonoBehaviour
     }
 
 
-
-    // We change the UpdateThrustOffset and UpdateTargetTilt methods to use agent input if agentControl is true
-/*
     private void UpdateThrustOffset()
     {
-        if (Input.GetKey(KeyCode.R))
+        // FOR ML-AGENTS
+        // During ML-Agent control, the vertical action replaces R/F.
+        if (useAgentControls)
         {
-            thrustOffset += thrustChangeRate * Time.fixedDeltaTime;
-        }
-        else if (Input.GetKey(KeyCode.F))
-        {
-            thrustOffset -= thrustChangeRate * Time.fixedDeltaTime;
+            if (agentVerticalInput > 0.01f)
+            {
+                thrustOffset +=
+                    thrustChangeRate *
+                    agentVerticalInput *
+                    Time.fixedDeltaTime;
+            }
+            else if (agentVerticalInput < -0.01f)
+            {
+                thrustOffset +=
+                    thrustChangeRate *
+                    agentVerticalInput *
+                    Time.fixedDeltaTime;
+            }
+            else
+            {
+                thrustOffset = Mathf.MoveTowards(
+                    thrustOffset,
+                    0.0f,
+                    thrustReturnRate * Time.fixedDeltaTime);
+            }
         }
         else
         {
-            thrustOffset = Mathf.MoveTowards(
-                thrustOffset,
-                0.0f,
-                thrustReturnRate * Time.fixedDeltaTime);
+            // Original keyboard controls from the github project.
+            if (Input.GetKey(KeyCode.R))
+                thrustOffset += thrustChangeRate * Time.fixedDeltaTime;
+            else if (Input.GetKey(KeyCode.F))
+                thrustOffset -= thrustChangeRate * Time.fixedDeltaTime;
+            else
+                thrustOffset = Mathf.MoveTowards(
+                    thrustOffset,
+                    0.0f,
+                    thrustReturnRate * Time.fixedDeltaTime);
         }
 
         thrustOffset = Mathf.Clamp(
             thrustOffset,
             -maximumThrustOffset,
             maximumThrustOffset);
-    } */
-
-    private void UpdateThrustOffset()
-{
-    if (agentControl)
-    {
-        thrustOffset += agentThrust * thrustChangeRate * Time.fixedDeltaTime;
-    }
-    else
-    {
-        if (Input.GetKey(KeyCode.R))
-        {
-            thrustOffset += thrustChangeRate * Time.fixedDeltaTime;
-        }
-        else if (Input.GetKey(KeyCode.F))
-        {
-            thrustOffset -= thrustChangeRate * Time.fixedDeltaTime;
-        }
-        else
-        {
-            thrustOffset = Mathf.MoveTowards(
-                thrustOffset,
-                0.0f,
-                thrustReturnRate * Time.fixedDeltaTime);
-        }
     }
 
-    thrustOffset = Mathf.Clamp(
-        thrustOffset,
-        -maximumThrustOffset,
-        maximumThrustOffset);
-}
 
     private void ApplyThrust()
     {
-        float cosine = Vector3.Dot(transform.up.normalized, Vector3.up);
+        float cosine =
+            Vector3.Dot(transform.up.normalized, Vector3.up);
+
         cosine = Mathf.Max(cosine, minimumCosine);
 
-        float hoverThrust = (rb.mass * Physics.gravity.magnitude) / cosine;
-        float thrustForce = hoverThrust + thrustOffset;
+        float hoverThrust =
+            (rb.mass * Physics.gravity.magnitude) / cosine;
 
-        rb.AddForce(transform.up * thrustForce, ForceMode.Force);
+        float thrustForce =
+            hoverThrust + thrustOffset;
+
+        rb.AddForce(
+            transform.up * thrustForce,
+            ForceMode.Force);
     }
+
 
     private void ApplyTiltTorque()
     {
-        Vector3 localAngularVelocity = transform.InverseTransformDirection(rb.angularVelocity);
-        Vector3 localAngles = GetLocalTiltAngles();
+        Vector3 localAngularVelocity =
+            transform.InverseTransformDirection(
+                rb.angularVelocity);
+
+        Vector3 localAngles =
+            GetLocalTiltAngles();
 
         Vector3 localTorque = new Vector3(
-            (targetPitch - localAngles.x) * tiltStabilizationTorque -
-            localAngularVelocity.x * angularDamping,
+            (targetPitch - localAngles.x)
+                * tiltStabilizationTorque
+                - localAngularVelocity.x * angularDamping,
+
             0.0f,
-            (targetRoll - localAngles.z) * tiltStabilizationTorque -
-            localAngularVelocity.z * angularDamping);
 
-        rb.AddRelativeTorque(localTorque, ForceMode.Force);
+            (targetRoll - localAngles.z)
+                * tiltStabilizationTorque
+                - localAngularVelocity.z * angularDamping
+        );
+
+        rb.AddRelativeTorque(
+            localTorque,
+            ForceMode.Force);
     }
-    // We change the UpdateTargetTilt method to use agent input if agentControl is true
-    /*private void UpdateTargetTilt()
-    {
-        if (Input.GetKey(KeyCode.W))
-        {
-            targetPitch += tiltChangeRate * Time.fixedDeltaTime;
-        }
-        if (Input.GetKey(KeyCode.S))
-        {
-            targetPitch -= tiltChangeRate * Time.fixedDeltaTime;
-        }
-        if (Input.GetKey(KeyCode.D))
-        {
-            targetRoll -= tiltChangeRate * Time.fixedDeltaTime;
-        }
-        if (Input.GetKey(KeyCode.A))
-        {
-            targetRoll += tiltChangeRate * Time.fixedDeltaTime;
-        }
 
-        targetPitch = Mathf.Clamp(targetPitch, -maximumTiltAngle, maximumTiltAngle);
-        targetRoll = Mathf.Clamp(targetRoll, -maximumTiltAngle, maximumTiltAngle);
-    }*/
 
-        private void UpdateTargetTilt()
+    private void UpdateTargetTilt()
     {
-        if (agentControl)
+        // FOR ML-AGENTS
+        // During ML-Agent control, continuous actions replace W/A/S/D.
+        /*if (useAgentControls)
         {
-            targetPitch += agentPitch * tiltChangeRate * Time.fixedDeltaTime;
-            targetRoll += agentRoll * tiltChangeRate * Time.fixedDeltaTime;
+            targetPitch +=
+                agentForwardInput *
+                tiltChangeRate *
+                Time.fixedDeltaTime;
+
+            targetRoll -=
+                agentSidewaysInput *
+                tiltChangeRate *
+                Time.fixedDeltaTime;
+        }*/
+
+        if (useAgentControls)
+        {
+            // FOR ML-AGENTS
+            // Continuous actions directly define the desired tilt.
+            // This makes the control predictable for the neural network:
+            //  0 = level
+            //  1 = maximum tilt in one direction
+            // -1 = maximum tilt in the opposite direction.
+            targetPitch =
+                agentForwardInput * maximumTiltAngle;
+
+            targetRoll =
+                -agentSidewaysInput * maximumTiltAngle;
         }
         else
         {
+            // Original keyboard controls from the github project.
             if (Input.GetKey(KeyCode.W))
-            {
                 targetPitch += tiltChangeRate * Time.fixedDeltaTime;
-            }
 
             if (Input.GetKey(KeyCode.S))
-            {
                 targetPitch -= tiltChangeRate * Time.fixedDeltaTime;
-            }
 
             if (Input.GetKey(KeyCode.D))
-            {
                 targetRoll -= tiltChangeRate * Time.fixedDeltaTime;
-            }
 
             if (Input.GetKey(KeyCode.A))
-            {
                 targetRoll += tiltChangeRate * Time.fixedDeltaTime;
-            }
         }
 
         targetPitch = Mathf.Clamp(
@@ -207,30 +226,54 @@ public class DroneController : MonoBehaviour
             maximumTiltAngle);
     }
 
+
     private Vector3 GetLocalTiltAngles()
     {
-        Quaternion localRotation = transform.parent == null
-            ? rb.rotation
-            : Quaternion.Inverse(transform.parent.rotation) * rb.rotation;
+        Quaternion localRotation =
+            transform.parent == null
+                ? rb.rotation
+                : Quaternion.Inverse(
+                    transform.parent.rotation) * rb.rotation;
 
-        Vector3 localAngles = localRotation.eulerAngles;
-        localAngles.x = NormalizeAngle(localAngles.x);
-        localAngles.z = NormalizeAngle(localAngles.z);
+        Vector3 localAngles =
+            localRotation.eulerAngles;
+
+        localAngles.x =
+            NormalizeAngle(localAngles.x);
+
+        localAngles.z =
+            NormalizeAngle(localAngles.z);
+
         return localAngles;
     }
 
+
     private void LimitTiltAngle()
     {
-        Quaternion localRotation = transform.parent == null
-            ? rb.rotation
-            : Quaternion.Inverse(transform.parent.rotation) * rb.rotation;
+        Quaternion localRotation =
+            transform.parent == null
+                ? rb.rotation
+                : Quaternion.Inverse(
+                    transform.parent.rotation) * rb.rotation;
 
-        Vector3 localAngles = localRotation.eulerAngles;
-        localAngles.x = NormalizeAngle(localAngles.x);
-        localAngles.z = NormalizeAngle(localAngles.z);
+        Vector3 localAngles =
+            localRotation.eulerAngles;
 
-        float limitedX = Mathf.Clamp(localAngles.x, -maximumTiltAngle, maximumTiltAngle);
-        float limitedZ = Mathf.Clamp(localAngles.z, -maximumTiltAngle, maximumTiltAngle);
+        localAngles.x =
+            NormalizeAngle(localAngles.x);
+
+        localAngles.z =
+            NormalizeAngle(localAngles.z);
+
+        float limitedX = Mathf.Clamp(
+            localAngles.x,
+            -maximumTiltAngle,
+            maximumTiltAngle);
+
+        float limitedZ = Mathf.Clamp(
+            localAngles.z,
+            -maximumTiltAngle,
+            maximumTiltAngle);
 
         if (Mathf.Approximately(localAngles.x, limitedX) &&
             Mathf.Approximately(localAngles.z, limitedZ))
@@ -238,18 +281,24 @@ public class DroneController : MonoBehaviour
             return;
         }
 
-        Quaternion limitedLocalRotation = Quaternion.Euler(
-            limitedX,
-            localRotation.eulerAngles.y,
-            limitedZ);
+        Quaternion limitedLocalRotation =
+            Quaternion.Euler(
+                limitedX,
+                localRotation.eulerAngles.y,
+                limitedZ);
 
-        rb.MoveRotation(transform.parent == null
-            ? limitedLocalRotation
-            : transform.parent.rotation * limitedLocalRotation);
+        rb.MoveRotation(
+            transform.parent == null
+                ? limitedLocalRotation
+                : transform.parent.rotation
+                  * limitedLocalRotation);
     }
+
 
     private float NormalizeAngle(float angle)
     {
-        return angle > 180.0f ? angle - 360.0f : angle;
+        return angle > 180.0f
+            ? angle - 360.0f
+            : angle;
     }
 }
