@@ -1,0 +1,29 @@
+{
+    "DroneLandingTest": {
+        "checkpoints": [
+            {
+                "steps": 300013,
+                "file_path": "results\\drone-landing-real2\\DroneLandingTest\\DroneLandingTest-300013.onnx",
+                "reward": 18.410551114515826,
+                "creation_time": 1792497219.4360156,
+                "auxillary_file_paths": [
+                    "results\\drone-landing-real2\\DroneLandingTest\\DroneLandingTest-300013.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 300013,
+            "file_path": "results\\drone-landing-real2\\DroneLandingTest.onnx",
+            "reward": 18.410551114515826,
+            "creation_time": 1792497219.4360156,
+            "auxillary_file_paths": [
+                "results\\drone-landing-real2\\DroneLandingTest\\DroneLandingTest-300013.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}

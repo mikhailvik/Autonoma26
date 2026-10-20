@@ -1,0 +1,65 @@
+{
+    "DroneLevel4Training": {
+        "checkpoints": [
+            {
+                "steps": 439999,
+                "file_path": "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-439999.onnx",
+                "reward": 17.948659539222717,
+                "creation_time": 1792150786.7805064,
+                "auxillary_file_paths": [
+                    "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-439999.pt"
+                ]
+            },
+            {
+                "steps": 459943,
+                "file_path": "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-459943.onnx",
+                "reward": null,
+                "creation_time": 1792150999.4949636,
+                "auxillary_file_paths": [
+                    "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-459943.pt"
+                ]
+            },
+            {
+                "steps": 479987,
+                "file_path": "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-479987.onnx",
+                "reward": 16.154091271571815,
+                "creation_time": 1792151273.397398,
+                "auxillary_file_paths": [
+                    "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-479987.pt"
+                ]
+            },
+            {
+                "steps": 499941,
+                "file_path": "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-499941.onnx",
+                "reward": 23.353410243988037,
+                "creation_time": 1792151488.762109,
+                "auxillary_file_paths": [
+                    "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-499941.pt"
+                ]
+            },
+            {
+                "steps": 500069,
+                "file_path": "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-500069.onnx",
+                "reward": 23.353410243988037,
+                "creation_time": 1792151488.8917634,
+                "auxillary_file_paths": [
+                    "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-500069.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 500069,
+            "file_path": "results\\drone-level5-training12\\DroneLevel4Training.onnx",
+            "reward": 23.353410243988037,
+            "creation_time": 1792151488.8917634,
+            "auxillary_file_paths": [
+                "results\\drone-level5-training12\\DroneLevel4Training\\DroneLevel4Training-500069.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}
